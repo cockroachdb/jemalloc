@@ -1484,6 +1484,21 @@ if test "x$have__malloc_thread_cleanup" = "x1" ; then
   force_tls="1"
 fi
 
+dnl ============================================================================
+dnl Check for spinlock(3) operations as provided on Darwin.
+
+JE_COMPILABLE([Darwin OSSpin*()], [
+#include <libkern/OSAtomic.h>
+#include <inttypes.h>
+], [
+	OSSpinLock lock = 0;
+	OSSpinLockLock(&lock);
+	OSSpinLockUnlock(&lock);
+], [je_cv_osspin])
+if test "x${je_cv_osspin}" = "xyes" ; then
+  AC_DEFINE([JEMALLOC_OSSPIN], [ ])
+fi
+
 dnl Check whether the BSD-specific _pthread_mutex_init_calloc_cb() exists.  If
 dnl so, mutex initialization causes allocation, and we need to implement this
 dnl callback function in order to prevent recursive allocation.
@@ -1491,7 +1506,7 @@ AC_CHECK_FUNC([_pthread_mutex_init_calloc_cb],
               [have__pthread_mutex_init_calloc_cb="1"],
               [have__pthread_mutex_init_calloc_cb="0"]
              )
-if test "x$have__pthread_mutex_init_calloc_cb" = "x1" ; then
+if test "x$have__pthread_mutex_init_calloc_cb" = "x1" -a "x${je_cv_osspin}" = "xno" ; then
   AC_DEFINE([JEMALLOC_MUTEX_INIT_CB])
 fi
 
@@ -1782,21 +1797,6 @@ JE_COMPILABLE([Darwin os_unfair_lock_*()], [
 ], [je_cv_os_unfair_lock])
 if test "x${je_cv_os_unfair_lock}" = "xyes" ; then
   AC_DEFINE([JEMALLOC_OS_UNFAIR_LOCK], [ ])
-fi
-
-dnl ============================================================================
-dnl Check for spinlock(3) operations as provided on Darwin.
-
-JE_COMPILABLE([Darwin OSSpin*()], [
-#include <libkern/OSAtomic.h>
-#include <inttypes.h>
-], [
-	OSSpinLock lock = 0;
-	OSSpinLockLock(&lock);
-	OSSpinLockUnlock(&lock);
-], [je_cv_osspin])
-if test "x${je_cv_osspin}" = "xyes" ; then
-  AC_DEFINE([JEMALLOC_OSSPIN], [ ])
 fi
 
 dnl ============================================================================
